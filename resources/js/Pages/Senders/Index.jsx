@@ -10,7 +10,7 @@ export default function index({ senders }) {
                 <h1 className="text-3xl font-bold">Senders</h1>
 
                 <Link
-                    href="/senders/create"
+                    href={route("senders.create")}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                 >
                     + Add Sender

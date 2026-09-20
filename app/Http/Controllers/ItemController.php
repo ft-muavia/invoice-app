@@ -11,7 +11,10 @@ class ItemController extends Controller
 
     public function index()
     {
-        $items = Item::latest()->get();
+        $items = Item::with('user')
+            ->where('user_id', auth()->id())
+            ->latest()
+            ->get();
 
         return Inertia::render('Items/Index', [
             'items' => $items,

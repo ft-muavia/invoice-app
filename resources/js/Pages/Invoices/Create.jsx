@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Layout from "@/Components/Layout";
-import { useForm } from "@inertiajs/react";
+import { useForm, Link } from "@inertiajs/react";
 import {
     Image,
     Plus,
@@ -77,91 +77,91 @@ export default function Create({ items, senders }) {
                 </div>
             ));
     };
-// Add Invoice Functionality
-const [invoiceItems, setInvoiceItems] = useState([]);
+    // Add Invoice Functionality
+    const [invoiceItems, setInvoiceItems] = useState([]);
 
-const addItem = () => {
-    setInvoiceItems([
-        ...invoiceItems,
-        {
-            id: Date.now(),
-            item_id: "",
-            qty: 1,
-            unit_price: "",
-            tax: "",
-            total: 0,
-        },
-    ]);
-};
+    const addItem = () => {
+        setInvoiceItems([
+            ...invoiceItems,
+            {
+                id: Date.now(),
+                item_id: "",
+                qty: 1,
+                unit_price: "",
+                tax: "",
+                total: 0,
+            },
+        ]);
+    };
 
-const deleteRow = (id) => {
-    setInvoiceItems(invoiceItems.filter((row) => row.id !== id));
-};
+    const deleteRow = (id) => {
+        setInvoiceItems(invoiceItems.filter((row) => row.id !== id));
+    };
 
-const calculateTotal = (qty, unit_price, tax) => {
-    const subtotal = Number(qty) * Number(unit_price);
-    const taxValue = Number(tax) || 0;
-    return subtotal - (subtotal * taxValue) / 100;
-};
+    const calculateTotal = (qty, unit_price, tax) => {
+        const subtotal = Number(qty) * Number(unit_price);
+        const taxValue = Number(tax) || 0;
+        return subtotal - (subtotal * taxValue) / 100;
+    };
 
-const handleItemChange = (rowId, itemId) => {
-    const selectedItem = items.find((item) => item.id === Number(itemId));
+    const handleItemChange = (rowId, itemId) => {
+        const selectedItem = items.find((item) => item.id === Number(itemId));
 
-    if (!selectedItem) return;
+        if (!selectedItem) return;
 
-    setInvoiceItems(
-        invoiceItems.map((row) => {
-            if (row.id === rowId) {
-                const total = calculateTotal(
-                    row.qty,
-                    selectedItem.unit_price,
-                    selectedItem.tax,
-                );
+        setInvoiceItems(
+            invoiceItems.map((row) => {
+                if (row.id === rowId) {
+                    const total = calculateTotal(
+                        row.qty,
+                        selectedItem.unit_price,
+                        selectedItem.tax,
+                    );
 
-                return {
-                    ...row,
-                    item_id: selectedItem.id,
-                    unit_price: selectedItem.unit_price,
-                    tax: selectedItem.tax,
-                    total: total,
-                };
-            }
+                    return {
+                        ...row,
+                        item_id: selectedItem.id,
+                        unit_price: selectedItem.unit_price,
+                        tax: selectedItem.tax,
+                        total: total,
+                    };
+                }
 
-            return row;
-        }),
+                return row;
+            }),
+        );
+    };
+
+    const handleQtyChange = (rowId, qty) => {
+        setInvoiceItems(
+            invoiceItems.map((row) => {
+                if (row.id === rowId) {
+                    const total = calculateTotal(qty, row.unit_price, row.tax);
+
+                    return {
+                        ...row,
+                        qty: qty,
+                        total: total,
+                    };
+                }
+
+                return row;
+            }),
+        );
+    };
+
+    // Summary calculations
+    const subtotal = invoiceItems.reduce(
+        (sum, row) => sum + Number(row.qty) * Number(row.unit_price || 0),
+        0,
     );
-};
 
-const handleQtyChange = (rowId, qty) => {
-    setInvoiceItems(
-        invoiceItems.map((row) => {
-            if (row.id === rowId) {
-                const total = calculateTotal(qty, row.unit_price, row.tax);
+    const totalTax = invoiceItems.reduce((sum, row) => {
+        const rowSubtotal = Number(row.qty) * Number(row.unit_price || 0);
+        return sum + (rowSubtotal * (Number(row.tax) || 0)) / 100;
+    }, 0);
 
-                return {
-                    ...row,
-                    qty: qty,
-                    total: total,
-                };
-            }
-
-            return row;
-        }),
-    );
-};
-
-// Summary calculations
-const subtotal = invoiceItems.reduce(
-    (sum, row) => sum + Number(row.qty) * Number(row.unit_price || 0),
-    0,
-);
-
-const totalTax = invoiceItems.reduce((sum, row) => {
-    const rowSubtotal = Number(row.qty) * Number(row.unit_price || 0);
-    return sum + (rowSubtotal * (Number(row.tax) || 0)) / 100;
-}, 0);
-
-const grandTotal = subtotal - totalTax;
+    const grandTotal = subtotal - totalTax;
     // sender info
     const [showCompanyInfo, setShowCompanyInfo] = useState(false);
     const [companyInfo, setCompanyInfo] = useState("");
@@ -316,7 +316,8 @@ const grandTotal = subtotal - totalTax;
                                             </p>
 
                                             <p className="text-gray-600">
-                                                {selectedSender?.address_1 ?? "-"}
+                                                {selectedSender?.address_1 ??
+                                                    "-"}
                                             </p>
 
                                             <button
@@ -725,31 +726,33 @@ const grandTotal = subtotal - totalTax;
                                         </select>
                                     </div>
 
-<div className="space-y-4">
-    <div className="flex justify-between text-lg">
-        <span>Subtotal</span>
-        <span>${subtotal.toFixed(2)}</span>
-    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between text-lg">
+                                            <span>Subtotal</span>
+                                            <span>${subtotal.toFixed(2)}</span>
+                                        </div>
 
-    <div className="flex justify-between text-lg">
-        <span>Tax</span>
-        <span>${totalTax.toFixed(2)}</span>
-    </div>
+                                        <div className="flex justify-between text-lg">
+                                            <span>Tax</span>
+                                            <span>${totalTax.toFixed(2)}</span>
+                                        </div>
 
-    <div id="payment-summary">
-        {payment && (
-            <div className="flex justify-between text-lg">
-                <span>Payment</span>
-                <span>${payment}</span>
-            </div>
-        )}
-    </div>
+                                        <div id="payment-summary">
+                                            {payment && (
+                                                <div className="flex justify-between text-lg">
+                                                    <span>Payment</span>
+                                                    <span>${payment}</span>
+                                                </div>
+                                            )}
+                                        </div>
 
-    <div className="flex justify-between text-2xl font-bold border-t pt-4">
-        <span>Total</span>
-        <span>${grandTotal.toFixed(2)}</span>
-    </div>
-</div>
+                                        <div className="flex justify-between text-2xl font-bold border-t pt-4">
+                                            <span>Total</span>
+                                            <span>
+                                                ${grandTotal.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             {renderCustomFields("above_terms")}
@@ -918,15 +921,19 @@ const grandTotal = subtotal - totalTax;
 
                     <hr className="my-8" />
 
-                    <button className="w-full flex justify-center bg-red-700 text-white rounded-xl py-4 font-semibold mb-4">
+                    <Link
+                        href={route("invoices.index")}
+                        className="w-full flex justify-center bg-red-700 text-white rounded-xl py-4 font-semibold mb-4"
+                    >
                         <span className="flex items-center gap-2">
-                            <Trash2 /> Delete Invoice
+                            <Trash2 />
+                            Delete Invoice
                         </span>
-                    </button>
+                    </Link>
 
                     <button className="w-full flex justify-center bg-blue-700 text-white rounded-xl py-4 font-semibold mb-4">
                         <span className="flex items-center gap-2">
-                            <Download /> Download Invoice
+                            <Download /> Download PDF
                         </span>
                     </button>
 

@@ -14,7 +14,7 @@ export default function Dashboard(props) {
 
                 <div className="bg-white rounded-lg shadow p-5">
                     <h2>Total Clients</h2>
-                    <p className="text-3xl font-bold mt-3">{props.clientsCount}</p>
+                    <p className="text-3xl font-bold mt-3">{clientsCount}</p>
                 </div>
 
                 <div className="bg-white rounded-lg shadow p-5">

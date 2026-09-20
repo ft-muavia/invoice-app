@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Sender extends Model
 {
     protected $fillable = [
+        'user_id',
         'first_name',
         'last_name',
         'sender_name',
@@ -21,4 +22,9 @@ class Sender extends Model
         'website',
         'is_default',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

@@ -1,6 +1,9 @@
 import { Search, Bell, User } from "lucide-react";
+import { usePage } from "@inertiajs/react";
 
 export default function Navbar() {
+
+    const { auth } = usePage().props;
     return (
         <nav className="h-16 bg-white shadow px-6 flex items-center justify-between">
 
@@ -28,9 +31,9 @@ export default function Navbar() {
                     </div>
 
                     <div>
-                        <h1 className="font-semibold">Admin</h1>
+                        <h1 className="font-semibold"> {auth.user?.name}</h1>
                         <p className="text-sm text-gray-500">
-                            Administrator
+                             {auth.user?.email}
                         </p>
                     </div>
 

@@ -10,7 +10,10 @@ class SenderController extends Controller
 {
     public function index()
     {
-        $senders = Sender::latest()->get();
+        $senders = Sender::with('user')
+            ->where('user_id', auth()->id())
+            ->latest()
+            ->get();
 
         return Inertia::render('Senders/Index', [
             'senders' => $senders,

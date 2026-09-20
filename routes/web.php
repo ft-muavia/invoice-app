@@ -27,13 +27,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // clients route
-    Route::resource('clients', ClientController::class);
+    Route::resource('clients', ClientController::class)->except('show');
     // sender route
-    Route::resource('senders', SenderController::class);
+    Route::resource('senders', SenderController::class)->except('show');
     // items route
-    Route::resource('items', ItemController::class);
+    Route::resource('items', ItemController::class)->except('show');
     // invoices route
-    Route::resource('invoices', InvoiceController::class);
+    Route::resource('invoices', InvoiceController::class)->except('destroy');
 });
 
 require __DIR__.'/auth.php';

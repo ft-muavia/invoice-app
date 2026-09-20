@@ -12,14 +12,14 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $clientsCount = Client::count();
-        $itemsCount = Item::count();
-        $invoicesCount = Invoice::count();
+        $clientsCount = Client::where('user_id', auth()->id())->count();
+        $itemsCount = Item::where('user_id', auth()->id())->count();
+        $invoicesCount = Invoice::where('user_id', auth()->id())->count();
 
         return Inertia::render('Dashboard',props: [
-            'clientsCount' => Client::count(),
-            'itemsCount' => Item::count(),
-            'invoicesCount' => Invoice::count(),
+            'clientsCount' => $clientsCount,
+            'itemsCount' => $itemsCount,
+            'invoicesCount' => $invoicesCount,
         ]);
     }
 }

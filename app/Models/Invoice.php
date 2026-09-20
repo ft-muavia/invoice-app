@@ -9,6 +9,7 @@ class Invoice extends Model
 {
     use HasFactory;
      protected $fillable = [
+        'user_id',
         'logo',
         'invoice_type',
         'invoice_number',
@@ -46,5 +47,10 @@ class Invoice extends Model
     public function item()
     {
         return $this->belongsTo(Item::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }
