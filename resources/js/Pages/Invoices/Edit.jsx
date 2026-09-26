@@ -721,17 +721,16 @@ export default function Edit({ invoice, items }) {
                             </span>
                         </button>
 
-                        <button
-                            type="button"
-                            className="w-full flex justify-center bg-blue-700 text-white rounded-xl py-4 font-semibold mb-4"
-                        >
-                            <span className="flex items-center gap-2">
-                                <Download /> Download Invoice
-                            </span>
-                        </button>
+<a
+href={route("invoices.pdf", invoice.id)}
+className="w-full flex justify-center bg-blue-700 text-white rounded-xl py-4 font-semibold mb-4"
+>
+    <Download />
+    Download PDF
+</a>
 
-                        <button
-                            type="submit"
+                        <a
+                            href={route("invoices.update", invoice.id)}
                             disabled={processing}
                             className="w-full flex justify-center bg-blue-700 text-white rounded-xl py-4 font-semibold disabled:opacity-50"
                         >
@@ -739,7 +738,7 @@ export default function Edit({ invoice, items }) {
                                 <Save />{" "}
                                 {processing ? "Updating..." : "Update Invoice"}
                             </span>
-                        </button>
+                        </a>
                     </div>
                 </div>
             </form>

@@ -8,13 +8,15 @@ use Inertia\Inertia;
 use App\Models\Item;
 use App\Models\Sender;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
 
 class InvoiceController extends Controller
 {
+
     public function index()
     {
         $invoices = Invoice::with(['client', 'sender'])
-            ->where('user_id', auth()->id())
+            ->where('user_id', Auth::id())
             ->latest()
             ->get();
 
@@ -22,16 +24,18 @@ class InvoiceController extends Controller
             'invoices' => $invoices,
         ]);
     }
+
     public function create()
     {
-        $items = Item::where('user_id', auth()->id())->get();
-        $senders = Sender::where('user_id', auth()->id())->get();
+        $items = Item::with(['user'])->where('user_id', Auth::id())->get();
+        $senders = Sender::with(['user'])->where('user_id', Auth::id())->get();
 
         return Inertia::render('Invoices/Create', [
             'items' => $items,
             'senders' => $senders,
         ]);
     }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -48,7 +52,7 @@ class InvoiceController extends Controller
             'items.*.tax' => 'nullable|numeric',
             'items.*.total' => 'required|numeric',
         ]);
-        $user_id = auth()->id();
+        $user_id = Auth::id();
         $invoice = Invoice::create([
             'invoice_type' => $validated['invoice_type'],
             'invoice_number' => $validated['invoice_number'],
@@ -75,16 +79,28 @@ class InvoiceController extends Controller
     public function edit($id)
     {
         $invoice = Invoice::with(['items', 'client', 'sender'])
-            ->where('user_id', auth()->id())
+            ->where('user_id', Auth::id())
             ->findOrFail($id);
 
-        $items = Item::where('user_id', auth()->id())->get();
+        $items = Item::with(['user'])->where('user_id', Auth::id())->get();
 
         return Inertia::render('Invoices/Edit', [
             'invoice' => $invoice,
             'items' => $items,
         ]);
     }
+
+    public function show($id)
+    {
+        $invoice = Invoice::with(['items.item', 'client', 'sender'])
+            ->where('user_id', Auth::id())
+            ->findOrFail($id);
+
+        return Inertia::render('Invoices/View', [
+            'invoice' => $invoice,
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
@@ -101,9 +117,9 @@ class InvoiceController extends Controller
             'items.*.tax' => 'nullable|numeric',
             'items.*.total' => 'required|numeric',
         ]);
-        // صرف موجودہ user اپنا invoice update کر سکتا ہے
-        $invoice = Invoice::where('user_id', auth()->id())
-            ->findOrFail($id);
+
+        $invoice = Invoice::with(['client', 'sender'])->where('user_id', Auth::id())->findOrFail($id);
+
         $invoice->update([
             'invoice_type' => $validated['invoice_type'],
             'invoice_number' => $validated['invoice_number'],
@@ -112,9 +128,9 @@ class InvoiceController extends Controller
             'client_id' => $validated['client_id'] ?? null,
             'sender_id' => $validated['sender_id'] ?? null,
         ]);
-        // پرانے invoice items delete کریں
+
         $invoice->items()->delete();
-        // نئے items add کریں
+
         foreach ($validated['items'] as $item) {
             $invoice->items()->create([
                 'item_id' => $item['item_id'],
@@ -124,18 +140,41 @@ class InvoiceController extends Controller
                 'total' => $item['total'],
             ]);
         }
+
         return redirect()
-            ->route('invoices.index')
+            ->route('/invoices.index')
             ->with('success', 'Invoice updated successfully.');
     }
-    public function show($id)
+    public function destroy($id)
     {
-        $invoice = Invoice::with(['items.item', 'client', 'sender'])
-            ->where('user_id', auth()->id())
-            ->findOrFail($id);
-        return Inertia::render('Invoices/View', [
-            'invoice' => $invoice,
+        $invoice = Invoice::with(['items'])->where('user_id', Auth::id())->findOrFail($id);
+
+        $invoice->items()->delete();
+
+        return redirect()
+            ->route('invoices.index')
+            ->with('success', 'Invoice deleted successfully.');
+    }
+
+    public function downloadPdf($id)
+    {
+        $invoice = Invoice::with([
+            'client',
+            'sender',
+            'items.item'
+        ])
+        ->where('user_id', Auth::id())
+        ->findOrFail($id);
+
+
+        $pdf = Pdf::loadView('pdf.invoice', [
+            'invoice' => $invoice
         ]);
+
+
+        return $pdf->download(
+            'invoice-'.$invoice->invoice_number.'.pdf'
+        );
     }
 
 }

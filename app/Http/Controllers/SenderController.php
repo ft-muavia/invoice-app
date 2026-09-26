@@ -11,7 +11,7 @@ class SenderController extends Controller
     public function index()
     {
         $senders = Sender::with('user')
-            ->where('user_id', auth()->id())
+            ->where('user_id', auth()->id)
             ->latest()
             ->get();
 
@@ -48,7 +48,7 @@ class SenderController extends Controller
             $logoPath = $request->file('logo')->store('logos', 'public');
             $validateData['logo'] = $logoPath;
         }
-        $validateData['user_id'] = auth()->id();
+        $validateData['user_id'] = auth()->id;
         
         Sender::create($validateData);
 

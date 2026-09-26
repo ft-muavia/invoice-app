@@ -33,7 +33,8 @@ Route::middleware('auth')->group(function () {
     // items route
     Route::resource('items', ItemController::class)->except('show');
     // invoices route
-    Route::resource('invoices', InvoiceController::class)->except('destroy');
+    Route::resource('invoices', InvoiceController::class);
+    Route::get('/invoices/{id}/pdf', [InvoiceController::class,'downloadPdf'])->name('invoices.pdf');
 });
 
 require __DIR__.'/auth.php';

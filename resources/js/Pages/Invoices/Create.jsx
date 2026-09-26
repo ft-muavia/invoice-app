@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState, useForm, Link } from "react";
 import Layout from "@/Components/Layout";
-import { useForm, Link } from "@inertiajs/react";
 import {
     Image,
     Plus,
@@ -182,9 +181,30 @@ export default function Create({ items, senders }) {
         issue_date: "",
         due_date: "",
         client_id: "",
-        sender_id: "", // ye naya add karo
-    });
+        sender_id: "",
 
+        client_name: "",
+        client_email: "",
+        client_city: "",
+    });
+    const addClient = (e) => {
+        e.preventDefault();
+
+        post(route("clients.store"), {
+            preserveScroll: true,
+
+            onSuccess: () => {
+                document.getElementById("client-modal").close();
+
+                setData({
+                    ...data,
+                    client_name: "",
+                    client_email: "",
+                    client_city: "",
+                });
+            },
+        });
+    };
     const handleSubmit = (e) => {
         e.preventDefault();
 
@@ -480,13 +500,20 @@ export default function Create({ items, senders }) {
                                                         Add New Client
                                                     </h3>
 
-                                                    <form method="dialog">
+                                                    <form onSubmit={addClient}>
                                                         <div className="mb-4">
                                                             <label className="block text-sm font-semibold mb-2">
                                                                 Client Name
                                                             </label>
                                                             <input
                                                                 type="text"
+                                                                onChange={(e) =>
+                                                                    setData(
+                                                                        "client_name",
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
                                                                 placeholder="Enter client name"
                                                                 className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                             />
@@ -498,6 +525,13 @@ export default function Create({ items, senders }) {
                                                             </label>
                                                             <input
                                                                 type="email"
+                                                                onChange={(e) =>
+                                                                    setData(
+                                                                        "client_email",
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
                                                                 placeholder="Enter email Address"
                                                                 className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                             />
@@ -509,6 +543,13 @@ export default function Create({ items, senders }) {
                                                             </label>
                                                             <input
                                                                 type="text"
+                                                                onChange={(e) =>
+                                                                    setData(
+                                                                        "client_city",
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
                                                                 placeholder="Enter City Name"
                                                                 className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                             />
@@ -930,12 +971,13 @@ export default function Create({ items, senders }) {
                             Delete Invoice
                         </span>
                     </Link>
-
-                    <button className="w-full flex justify-center bg-blue-700 text-white rounded-xl py-4 font-semibold mb-4">
-                        <span className="flex items-center gap-2">
-                            <Download /> Download PDF
-                        </span>
-                    </button>
+                    {/* <a
+                        href={route("invoices.pdf", invoice.id)}
+                        className="w-full flex justify-center bg-blue-700 text-white rounded-xl py-4 font-semibold"
+                    >
+                        <Download />
+                        Download PDF
+                    </a> */}
 
                     <button className="w-full flex justify-center bg-blue-700 text-white rounded-xl py-4 font-semibold">
                         <span className="flex items-center gap-2">
