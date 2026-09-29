@@ -51,13 +51,30 @@ export default function Index({ invoices }) {
 
                                 <p>
                                     <strong>Client:</strong>{" "}
-                                    {invoice.client?.first_name}{" "}
-                                    {invoice.client?.last_name}
+                                    {invoice.client_info?.name ||
+                                        [
+                                            invoice.client?.first_name,
+                                            invoice.client?.last_name,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(" ") ||
+                                        invoice.client?.company_name ||
+                                        invoice.client_info?.company_name ||
+                                        "Client (Deleted)"}
                                 </p>
 
                                 <p>
                                     <strong>Sender:</strong>{" "}
-                                    {invoice.sender?.sender_name}
+                                    {invoice.sender_info?.sender_name ||
+                                        invoice.sender?.sender_name ||
+                                        invoice.sender_info?.name ||
+                                        [
+                                            invoice.sender?.first_name,
+                                            invoice.sender?.last_name,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(" ") ||
+                                        "—"}
                                 </p>
 
                                 <p>

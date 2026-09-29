@@ -3,13 +3,18 @@ import Layout from "../../Components/Layout";
 import { Link, router } from "@inertiajs/react";
 
 export default function Index({ clients }) {
-    const handleDelete = (id) => {
+    const handleDelete = (client) => {
+        const warning =
+            client.invoices_count > 0
+                ? `\n\nWarning: This client is linked to ${client.invoices_count} invoice(s). Existing invoices will be preserved using their historical snapshot.`
+                : "";
+
         if (
             confirm(
-                "Are you sure you want to delete this client? This action cannot be undone.",
+                `Are you sure you want to delete "${client.first_name} ${client.last_name}"?${warning}`
             )
         ) {
-            router.delete(route("clients.destroy", id));
+            router.delete(route("clients.destroy", client.id));
         }
     };
     return (
@@ -90,7 +95,7 @@ export default function Index({ clients }) {
                                                 Edit
                                             </Link>
 
-                                            <button onClick={() => handleDelete(client.id)}
+                                            <button onClick={() => handleDelete(client)}
                                                 className="bg-red-600 text-white px-3 py-1 rounded"
                                             >
                                                 Delete

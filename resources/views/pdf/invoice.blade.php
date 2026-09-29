@@ -166,12 +166,18 @@
         $taxTotal = !is_null($invoice->tax) ? (float)$invoice->tax : $calcTax;
         $grandTotal = !is_null($invoice->total) ? (float)$invoice->total : ($subtotal + $taxTotal);
 
-        $senderName = $invoice->sender?->sender_name 
-            ?: trim(($invoice->sender?->first_name ?? '') . ' ' . ($invoice->sender?->last_name ?? ''))
+        // Prefer stored client_info and sender_info snapshots over live relations
+        $clientData = $invoice->client_info ?: ($invoice->client ? $invoice->client->toArray() : []);
+        $senderData = $invoice->sender_info ?: ($invoice->sender ? $invoice->sender->toArray() : []);
+
+        $senderName = $senderData['sender_name'] 
+            ?? $senderData['name'] 
+            ?? trim(($senderData['first_name'] ?? '') . ' ' . ($senderData['last_name'] ?? ''))
             ?: 'Business Sender';
 
-        $clientName = trim(($invoice->client?->first_name ?? '') . ' ' . ($invoice->client?->last_name ?? ''))
-            ?: ($invoice->client?->company_name ?? 'Client / Recipient');
+        $clientName = $clientData['name']
+            ?? trim(($clientData['first_name'] ?? '') . ' ' . ($clientData['last_name'] ?? ''))
+            ?: ($clientData['company_name'] ?? 'Client / Recipient');
     @endphp
 
     {{-- Header --}}
@@ -201,22 +207,29 @@
             <td class="parties-card" style="width: 48%;">
                 <h3>From (Sender)</h3>
                 <div class="party-name">{{ $senderName }}</div>
-                @if($invoice->sender?->email)
-                    <div class="party-detail">{{ $invoice->sender->email }}</div>
+                @if(!empty($senderData['email']))
+                    <div class="party-detail">{{ $senderData['email'] }}</div>
                 @endif
-                @if($invoice->sender?->phone_number)
-                    <div class="party-detail">Phone: {{ $invoice->sender->phone_number }}</div>
+                @if(!empty($senderData['phone_number']))
+                    <div class="party-detail">Phone: {{ $senderData['phone_number'] }}</div>
                 @endif
-                @if($invoice->sender?->address_1)
-                    <div class="party-detail">{{ $invoice->sender->address_1 }}</div>
+                @if(!empty($senderData['address_1']) || !empty($senderData['address_line_1']))
+                    <div class="party-detail">{{ $senderData['address_1'] ?? $senderData['address_line_1'] }}</div>
                 @endif
-                @if($invoice->sender?->city || $invoice->sender?->country)
+                @php
+                    $senderLocation = array_filter([
+                        $senderData['city'] ?? null,
+                        $senderData['postal_code'] ?? null,
+                        $senderData['country'] ?? null,
+                    ]);
+                @endphp
+                @if(count($senderLocation) > 0)
                     <div class="party-detail">
-                        {{ implode(', ', array_filter([$invoice->sender?->city, $invoice->sender?->postal_code, $invoice->sender?->country])) }}
+                        {{ implode(', ', $senderLocation) }}
                     </div>
                 @endif
-                @if($invoice->sender?->tax_registration_number)
-                    <div class="party-detail">Tax ID: {{ $invoice->sender->tax_registration_number }}</div>
+                @if(!empty($senderData['tax_registration_number']))
+                    <div class="party-detail">Tax ID: {{ $senderData['tax_registration_number'] }}</div>
                 @endif
             </td>
 
@@ -225,21 +238,28 @@
             <td class="parties-card" style="width: 48%;">
                 <h3>Bill To (Client)</h3>
                 <div class="party-name">{{ $clientName }}</div>
-                @if($invoice->client?->company_name && $invoice->client?->company_name !== $clientName)
-                    <div class="party-detail"><strong>{{ $invoice->client->company_name }}</strong></div>
+                @if(!empty($clientData['company_name']) && $clientData['company_name'] !== $clientName)
+                    <div class="party-detail"><strong>{{ $clientData['company_name'] }}</strong></div>
                 @endif
-                @if($invoice->client?->email)
-                    <div class="party-detail">{{ $invoice->client->email }}</div>
+                @if(!empty($clientData['email']))
+                    <div class="party-detail">{{ $clientData['email'] }}</div>
                 @endif
-                @if($invoice->client?->phone)
-                    <div class="party-detail">Phone: {{ $invoice->client->phone }}</div>
+                @if(!empty($clientData['phone']))
+                    <div class="party-detail">Phone: {{ $clientData['phone'] }}</div>
                 @endif
-                @if($invoice->client?->address_line_1)
-                    <div class="party-detail">{{ $invoice->client->address_line_1 }}</div>
+                @if(!empty($clientData['address_line_1']))
+                    <div class="party-detail">{{ $clientData['address_line_1'] }}</div>
                 @endif
-                @if($invoice->client?->city || $invoice->client?->country)
+                @php
+                    $clientLocation = array_filter([
+                        $clientData['city'] ?? null,
+                        $clientData['postal_code'] ?? null,
+                        $clientData['country'] ?? null,
+                    ]);
+                @endphp
+                @if(count($clientLocation) > 0)
                     <div class="party-detail">
-                        {{ implode(', ', array_filter([$invoice->client?->city, $invoice->client?->postal_code, $invoice->client?->country])) }}
+                        {{ implode(', ', $clientLocation) }}
                     </div>
                 @endif
             </td>

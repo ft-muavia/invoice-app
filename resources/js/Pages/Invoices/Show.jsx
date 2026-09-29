@@ -39,32 +39,73 @@ export default function Show({ invoice }) {
         }
     };
 
+    // Prefer stored historical snapshot over live relation
+    const clientData =
+        invoice.client_info ||
+        (invoice.client
+            ? {
+                  name:
+                      [invoice.client.first_name, invoice.client.last_name]
+                          .filter(Boolean)
+                          .join(" ") || invoice.client.company_name,
+                  first_name: invoice.client.first_name,
+                  last_name: invoice.client.last_name,
+                  company_name: invoice.client.company_name,
+                  email: invoice.client.email,
+                  phone: invoice.client.phone,
+                  address_line_1: invoice.client.address_line_1,
+                  city: invoice.client.city,
+                  postal_code: invoice.client.postal_code,
+                  country: invoice.client.country,
+              }
+            : {});
+
+    const senderData =
+        invoice.sender_info ||
+        (invoice.sender
+            ? {
+                  name:
+                      invoice.sender.sender_name ||
+                      [invoice.sender.first_name, invoice.sender.last_name]
+                          .filter(Boolean)
+                          .join(" "),
+                  sender_name: invoice.sender.sender_name,
+                  email: invoice.sender.email,
+                  phone_number: invoice.sender.phone_number,
+                  address_1: invoice.sender.address_1,
+                  city: invoice.sender.city,
+                  postal_code: invoice.sender.postal_code,
+                  country: invoice.sender.country,
+                  tax_registration_number: invoice.sender.tax_registration_number,
+              }
+            : {});
+
     const senderDisplayName =
-        invoice.sender?.sender_name ||
-        [invoice.sender?.first_name, invoice.sender?.last_name]
+        senderData.sender_name ||
+        senderData.name ||
+        [senderData.first_name, senderData.last_name]
             .filter(Boolean)
             .join(" ") ||
         "Sender / Business";
 
     const senderAddressParts = [
-        invoice.sender?.address_1,
-        invoice.sender?.city,
-        invoice.sender?.postal_code,
-        invoice.sender?.country,
+        senderData.address_1 || senderData.address_line_1,
+        senderData.city,
+        senderData.postal_code,
+        senderData.country,
     ].filter(Boolean);
 
     const clientDisplayName =
-        [invoice.client?.first_name, invoice.client?.last_name]
-            .filter(Boolean)
-            .join(" ") ||
-        invoice.client?.company_name ||
+        clientData.name ||
+        [clientData.first_name, clientData.last_name].filter(Boolean).join(" ") ||
+        clientData.company_name ||
         "Client / Recipient";
 
     const clientAddressParts = [
-        invoice.client?.address_line_1,
-        invoice.client?.city,
-        invoice.client?.postal_code,
-        invoice.client?.country,
+        clientData.address_line_1,
+        clientData.city,
+        clientData.postal_code,
+        clientData.country,
     ].filter(Boolean);
 
     return (
@@ -134,14 +175,14 @@ export default function Show({ invoice }) {
                                 <p className="text-base font-bold text-gray-900">
                                     {senderDisplayName}
                                 </p>
-                                {invoice.sender?.email && (
+                                {senderData.email && (
                                     <p className="text-sm text-gray-600 mt-0.5">
-                                        {invoice.sender.email}
+                                        {senderData.email}
                                     </p>
                                 )}
-                                {invoice.sender?.phone_number && (
+                                {senderData.phone_number && (
                                     <p className="text-sm text-gray-600 mt-0.5">
-                                        {invoice.sender.phone_number}
+                                        {senderData.phone_number}
                                     </p>
                                 )}
                                 {senderAddressParts.length > 0 && (
@@ -149,9 +190,9 @@ export default function Show({ invoice }) {
                                         {senderAddressParts.join(", ")}
                                     </p>
                                 )}
-                                {invoice.sender?.tax_registration_number && (
+                                {senderData.tax_registration_number && (
                                     <p className="text-xs text-gray-400 mt-1">
-                                        Tax ID: {invoice.sender.tax_registration_number}
+                                        Tax ID: {senderData.tax_registration_number}
                                     </p>
                                 )}
                             </div>
@@ -164,20 +205,20 @@ export default function Show({ invoice }) {
                                 <p className="text-base font-bold text-gray-900">
                                     {clientDisplayName}
                                 </p>
-                                {invoice.client?.company_name &&
-                                    invoice.client?.company_name !== clientDisplayName && (
+                                {clientData.company_name &&
+                                    clientData.company_name !== clientDisplayName && (
                                         <p className="text-sm font-medium text-gray-700">
-                                            {invoice.client.company_name}
+                                            {clientData.company_name}
                                         </p>
                                     )}
-                                {invoice.client?.email && (
+                                {clientData.email && (
                                     <p className="text-sm text-gray-600 mt-0.5">
-                                        {invoice.client.email}
+                                        {clientData.email}
                                     </p>
                                 )}
-                                {invoice.client?.phone && (
+                                {clientData.phone && (
                                     <p className="text-sm text-gray-600 mt-0.5">
-                                        {invoice.client.phone}
+                                        {clientData.phone}
                                     </p>
                                 )}
                                 {clientAddressParts.length > 0 && (

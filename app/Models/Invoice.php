@@ -29,6 +29,14 @@ class Invoice extends Model
         'terms',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'client_info' => 'array',
+            'sender_info' => 'array',
+        ];
+    }
+
     public function sender()
     {
         return $this->belongsTo(Sender::class);
