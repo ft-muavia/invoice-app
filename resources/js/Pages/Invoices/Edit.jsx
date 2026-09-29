@@ -49,7 +49,9 @@ export default function Edit({ invoice, items }) {
         setInvoiceItems(
             invoiceItems.map((row) => {
                 if (row.id === rowId) {
-                    const total = row.qty * selectedItem.unit_price;
+                    const lineSub = Number(row.qty) * Number(selectedItem.unit_price);
+                    const lineTax = Number(selectedItem.tax) || 0;
+                    const total = lineSub + (lineSub * lineTax) / 100;
 
                     return {
                         ...row,
@@ -69,9 +71,9 @@ export default function Edit({ invoice, items }) {
         setInvoiceItems(
             invoiceItems.map((row) => {
                 if (row.id === rowId) {
-                    const subtotal = qty * row.unit_price;
+                    const subtotal = Number(qty) * Number(row.unit_price);
                     const tax = Number(row.tax) || 0;
-                    const total = subtotal - (subtotal * tax) / 100;
+                    const total = subtotal + (subtotal * tax) / 100;
 
                     return {
                         ...row,
@@ -119,7 +121,7 @@ export default function Edit({ invoice, items }) {
         return sum + (rowSubtotal * (Number(row.tax) || 0)) / 100;
     }, 0);
 
-    const grandTotal = subtotal - taxTotal + Number(payment || 0);
+    const grandTotal = subtotal + taxTotal;
 
     const handleSubmit = (e) => {
         e.preventDefault();

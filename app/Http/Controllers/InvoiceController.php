@@ -45,22 +45,43 @@ class InvoiceController extends Controller
             'due_date' => 'required|date',
             'client_id' => 'nullable|exists:clients,id',
             'sender_id' => 'nullable|exists:senders,id',
+            'terms' => 'nullable|string',
+            'description' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:items,id',
-            'items.*.qty' => 'required|numeric|min:1',
-            'items.*.unit_price' => 'required|numeric',
-            'items.*.tax' => 'nullable|numeric',
-            'items.*.total' => 'required|numeric',
+            'items.*.qty' => 'required|numeric|min:0.01',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.tax' => 'nullable|numeric|min:0',
+            'items.*.description' => 'nullable|string',
         ]);
+
         $calcSubtotal = 0;
         $calcTax = 0;
         $calcTotal = 0;
+        $processedItems = [];
+
         foreach ($validated['items'] as $item) {
-            $itemSubtotal = (float)$item['qty'] * (float)$item['unit_price'];
-            $itemTax = ($itemSubtotal * (float)($item['tax'] ?? 0)) / 100;
-            $calcSubtotal += $itemSubtotal;
-            $calcTax += $itemTax;
-            $calcTotal += (float)$item['total'];
+            $qty = (float)$item['qty'];
+            $unitPrice = (float)$item['unit_price'];
+            $taxRate = (float)($item['tax'] ?? 0);
+
+            $lineSubtotal = round($qty * $unitPrice, 2);
+            $lineTax = round(($lineSubtotal * $taxRate) / 100, 2);
+            $lineTotal = round($lineSubtotal + $lineTax, 2);
+
+            $calcSubtotal += $lineSubtotal;
+            $calcTax += $lineTax;
+            $calcTotal += $lineTotal;
+
+            $processedItems[] = [
+                'item_id' => $item['item_id'],
+                'qty' => $qty,
+                'unit_price' => $unitPrice,
+                'tax' => $taxRate,
+                'description' => $item['description'] ?? null,
+                'subtotal' => $lineSubtotal,
+                'total' => $lineTotal,
+            ];
         }
 
         $user_id = Auth::id();
@@ -71,20 +92,16 @@ class InvoiceController extends Controller
             'due_date' => $validated['due_date'],
             'client_id' => $validated['client_id'] ?? null,
             'sender_id' => $validated['sender_id'] ?? null,
+            'terms' => $validated['terms'] ?? null,
+            'description' => $validated['description'] ?? null,
             'user_id' => $user_id,
-            'subtotal' => $calcSubtotal,
-            'tax' => $calcTax,
-            'total' => $calcTotal,
+            'subtotal' => round($calcSubtotal, 2),
+            'tax' => round($calcTax, 2),
+            'total' => round($calcTotal, 2),
         ]);
 
-        foreach ($validated['items'] as $item) {
-            $invoice->items()->create([
-                'item_id' => $item['item_id'],
-                'qty' => $item['qty'],
-                'unit_price' => $item['unit_price'],
-                'tax' => $item['tax'] ?? 0,
-                'total' => $item['total'],
-            ]);
+        foreach ($processedItems as $itemData) {
+            $invoice->items()->create($itemData);
         }
 
         return redirect()->route('invoices.index')->with('success', 'Invoice created successfully.');
@@ -124,12 +141,14 @@ class InvoiceController extends Controller
             'due_date' => 'required|date',
             'client_id' => 'nullable|exists:clients,id',
             'sender_id' => 'nullable|exists:senders,id',
+            'terms' => 'nullable|string',
+            'description' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:items,id',
-            'items.*.qty' => 'required|numeric|min:1',
-            'items.*.unit_price' => 'required|numeric',
-            'items.*.tax' => 'nullable|numeric',
-            'items.*.total' => 'required|numeric',
+            'items.*.qty' => 'required|numeric|min:0.01',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.tax' => 'nullable|numeric|min:0',
+            'items.*.description' => 'nullable|string',
         ]);
 
         $invoice = Invoice::with(['client', 'sender'])->where('user_id', Auth::id())->findOrFail($id);
@@ -137,12 +156,30 @@ class InvoiceController extends Controller
         $calcSubtotal = 0;
         $calcTax = 0;
         $calcTotal = 0;
+        $processedItems = [];
+
         foreach ($validated['items'] as $item) {
-            $itemSubtotal = (float)$item['qty'] * (float)$item['unit_price'];
-            $itemTax = ($itemSubtotal * (float)($item['tax'] ?? 0)) / 100;
-            $calcSubtotal += $itemSubtotal;
-            $calcTax += $itemTax;
-            $calcTotal += (float)$item['total'];
+            $qty = (float)$item['qty'];
+            $unitPrice = (float)$item['unit_price'];
+            $taxRate = (float)($item['tax'] ?? 0);
+
+            $lineSubtotal = round($qty * $unitPrice, 2);
+            $lineTax = round(($lineSubtotal * $taxRate) / 100, 2);
+            $lineTotal = round($lineSubtotal + $lineTax, 2);
+
+            $calcSubtotal += $lineSubtotal;
+            $calcTax += $lineTax;
+            $calcTotal += $lineTotal;
+
+            $processedItems[] = [
+                'item_id' => $item['item_id'],
+                'qty' => $qty,
+                'unit_price' => $unitPrice,
+                'tax' => $taxRate,
+                'description' => $item['description'] ?? null,
+                'subtotal' => $lineSubtotal,
+                'total' => $lineTotal,
+            ];
         }
 
         $invoice->update([
@@ -152,21 +189,17 @@ class InvoiceController extends Controller
             'due_date' => $validated['due_date'],
             'client_id' => $validated['client_id'] ?? null,
             'sender_id' => $validated['sender_id'] ?? null,
-            'subtotal' => $calcSubtotal,
-            'tax' => $calcTax,
-            'total' => $calcTotal,
+            'terms' => $validated['terms'] ?? $invoice->terms,
+            'description' => $validated['description'] ?? $invoice->description,
+            'subtotal' => round($calcSubtotal, 2),
+            'tax' => round($calcTax, 2),
+            'total' => round($calcTotal, 2),
         ]);
 
         $invoice->items()->delete();
 
-        foreach ($validated['items'] as $item) {
-            $invoice->items()->create([
-                'item_id' => $item['item_id'],
-                'qty' => $item['qty'],
-                'unit_price' => $item['unit_price'],
-                'tax' => $item['tax'] ?? 0,
-                'total' => $item['total'],
-            ]);
+        foreach ($processedItems as $itemData) {
+            $invoice->items()->create($itemData);
         }
 
         return redirect()

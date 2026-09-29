@@ -100,7 +100,7 @@ export default function Create({ items, senders }) {
     const calculateTotal = (qty, unit_price, tax) => {
         const subtotal = Number(qty) * Number(unit_price);
         const taxValue = Number(tax) || 0;
-        return subtotal - (subtotal * taxValue) / 100;
+        return subtotal + (subtotal * taxValue) / 100;
     };
 
     const handleItemChange = (rowId, itemId) => {
@@ -160,7 +160,7 @@ export default function Create({ items, senders }) {
         return sum + (rowSubtotal * (Number(row.tax) || 0)) / 100;
     }, 0);
 
-    const grandTotal = subtotal - totalTax;
+    const grandTotal = subtotal + totalTax;
     // sender info
     const [showCompanyInfo, setShowCompanyInfo] = useState(false);
     const [companyInfo, setCompanyInfo] = useState("");
