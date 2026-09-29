@@ -52,6 +52,17 @@ class InvoiceController extends Controller
             'items.*.tax' => 'nullable|numeric',
             'items.*.total' => 'required|numeric',
         ]);
+        $calcSubtotal = 0;
+        $calcTax = 0;
+        $calcTotal = 0;
+        foreach ($validated['items'] as $item) {
+            $itemSubtotal = (float)$item['qty'] * (float)$item['unit_price'];
+            $itemTax = ($itemSubtotal * (float)($item['tax'] ?? 0)) / 100;
+            $calcSubtotal += $itemSubtotal;
+            $calcTax += $itemTax;
+            $calcTotal += (float)$item['total'];
+        }
+
         $user_id = Auth::id();
         $invoice = Invoice::create([
             'invoice_type' => $validated['invoice_type'],
@@ -61,6 +72,9 @@ class InvoiceController extends Controller
             'client_id' => $validated['client_id'] ?? null,
             'sender_id' => $validated['sender_id'] ?? null,
             'user_id' => $user_id,
+            'subtotal' => $calcSubtotal,
+            'tax' => $calcTax,
+            'total' => $calcTotal,
         ]);
 
         foreach ($validated['items'] as $item) {
@@ -96,7 +110,7 @@ class InvoiceController extends Controller
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
-        return Inertia::render('Invoices/View', [
+        return Inertia::render('Invoices/Show', [
             'invoice' => $invoice,
         ]);
     }
@@ -120,6 +134,17 @@ class InvoiceController extends Controller
 
         $invoice = Invoice::with(['client', 'sender'])->where('user_id', Auth::id())->findOrFail($id);
 
+        $calcSubtotal = 0;
+        $calcTax = 0;
+        $calcTotal = 0;
+        foreach ($validated['items'] as $item) {
+            $itemSubtotal = (float)$item['qty'] * (float)$item['unit_price'];
+            $itemTax = ($itemSubtotal * (float)($item['tax'] ?? 0)) / 100;
+            $calcSubtotal += $itemSubtotal;
+            $calcTax += $itemTax;
+            $calcTotal += (float)$item['total'];
+        }
+
         $invoice->update([
             'invoice_type' => $validated['invoice_type'],
             'invoice_number' => $validated['invoice_number'],
@@ -127,6 +152,9 @@ class InvoiceController extends Controller
             'due_date' => $validated['due_date'],
             'client_id' => $validated['client_id'] ?? null,
             'sender_id' => $validated['sender_id'] ?? null,
+            'subtotal' => $calcSubtotal,
+            'tax' => $calcTax,
+            'total' => $calcTotal,
         ]);
 
         $invoice->items()->delete();
@@ -142,7 +170,7 @@ class InvoiceController extends Controller
         }
 
         return redirect()
-            ->route('/invoices.index')
+            ->route('invoices.index')
             ->with('success', 'Invoice updated successfully.');
     }
     public function destroy($id)

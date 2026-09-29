@@ -14,6 +14,7 @@ class InvoiceItem extends Model
         'tax',
         'description',
         'subtotal',
+        'total',
     ];
 
     public function invoice()

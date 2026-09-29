@@ -1,8 +1,14 @@
 import React from "react";
 import Layout from "@/Components/Layout";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
+import { Download, Eye, Pencil, Trash2 } from "lucide-react";
 
 export default function Index({ invoices }) {
+    const handleDelete = (id) => {
+        if (confirm("Are you sure you want to delete this invoice?")) {
+            router.delete(route("invoices.destroy", id));
+        }
+    };
     return (
         <Layout>
             <div className="flex items-center justify-between mb-6">
@@ -72,25 +78,37 @@ export default function Index({ invoices }) {
 
                             {/* Buttons */}
                             <div className="flex gap-2 mt-5">
-
                                 <Link
                                     href={`/invoices/${invoice.id}`}
-                                    className="flex-1 text-center bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg"
+                                    className="flex-1 inline-flex justify-center items-center gap-1 text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium"
                                 >
-                                    View
+                                    <Eye size={16} /> View
                                 </Link>
+
+                                <a
+                                    href={route("invoices.pdf", invoice.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-1 inline-flex justify-center items-center gap-1 text-center bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-medium"
+                                >
+                                    <Download size={16} /> PDF
+                                </a>
 
                                 <Link
                                     href={`/invoices/${invoice.id}/edit`}
-                                    className="flex-1 text-center bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg"
+                                    className="p-2 text-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg"
+                                    title="Edit"
                                 >
-                                    Edit
+                                    <Pencil size={16} />
                                 </Link>
 
-                                <button className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg">
-                                    Delete
+                                <button
+                                    onClick={() => handleDelete(invoice.id)}
+                                    className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg"
+                                    title="Delete"
+                                >
+                                    <Trash2 size={16} />
                                 </button>
-
                             </div>
                         </div>
                     ))
