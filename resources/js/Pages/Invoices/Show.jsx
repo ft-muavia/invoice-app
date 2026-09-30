@@ -152,9 +152,22 @@ export default function Show({ invoice }) {
                             </div>
 
                             <div className="text-left sm:text-right space-y-1">
-                                <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 uppercase mb-2">
-                                    <Calendar size={13} />
-                                    <span>Issued: {invoice.issue_date || "—"}</span>
+                                <div className="flex flex-wrap sm:justify-end gap-2 mb-2">
+                                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 uppercase">
+                                        <Calendar size={13} />
+                                        <span>Issued: {invoice.issue_date || "—"}</span>
+                                    </div>
+                                    <span
+                                        className={`inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full uppercase ${
+                                            invoice.status === "approved"
+                                                ? "bg-emerald-100 text-emerald-800"
+                                                : invoice.status === "rejected"
+                                                ? "bg-rose-100 text-rose-800"
+                                                : "bg-amber-100 text-amber-800"
+                                        }`}
+                                    >
+                                        {invoice.status || "pending"}
+                                    </span>
                                 </div>
                                 <p className="text-sm text-gray-600">
                                     <span className="text-gray-400">Due Date:</span>{" "}
@@ -320,6 +333,66 @@ export default function Show({ invoice }) {
                         <h2 className="text-lg font-bold text-gray-800 pb-2 border-b">
                             Actions
                         </h2>
+
+                        {/* Status Quick Switch */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                            <label className="text-xs font-bold uppercase tracking-wider text-gray-500 block mb-2">
+                                Invoice Status
+                            </label>
+                            <div className="grid grid-cols-3 gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        router.patch(
+                                            route("invoices.status", invoice.id),
+                                            { status: "pending" },
+                                            { preserveScroll: true }
+                                        )
+                                    }
+                                    className={`py-1.5 px-2 rounded text-xs font-semibold transition text-center ${
+                                        (invoice.status || "pending") === "pending"
+                                            ? "bg-amber-500 text-white shadow-sm"
+                                            : "bg-white text-gray-600 hover:bg-amber-50 hover:text-amber-700 border"
+                                    }`}
+                                >
+                                    Pending
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        router.patch(
+                                            route("invoices.status", invoice.id),
+                                            { status: "approved" },
+                                            { preserveScroll: true }
+                                        )
+                                    }
+                                    className={`py-1.5 px-2 rounded text-xs font-semibold transition text-center ${
+                                        invoice.status === "approved"
+                                            ? "bg-emerald-600 text-white shadow-sm"
+                                            : "bg-white text-gray-600 hover:bg-emerald-50 hover:text-emerald-700 border"
+                                    }`}
+                                >
+                                    Approved
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        router.patch(
+                                            route("invoices.status", invoice.id),
+                                            { status: "rejected" },
+                                            { preserveScroll: true }
+                                        )
+                                    }
+                                    className={`py-1.5 px-2 rounded text-xs font-semibold transition text-center ${
+                                        invoice.status === "rejected"
+                                            ? "bg-rose-600 text-white shadow-sm"
+                                            : "bg-white text-gray-600 hover:bg-rose-50 hover:text-rose-700 border"
+                                    }`}
+                                >
+                                    Rejected
+                                </button>
+                            </div>
+                        </div>
 
                         {/* Primary Action: Download PDF */}
                         <a
