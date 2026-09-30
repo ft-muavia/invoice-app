@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
 use App\Models\Client;
 use App\Models\Invoice;
 use Inertia\Inertia;
@@ -13,6 +14,8 @@ class ClientController extends Controller
 {
     public function index()
     {
+        Gate::authorize('viewAny', Client::class);
+
         $clients = Client::with('user')
             ->withCount('invoices')
             ->where('user_id', auth()->id())
@@ -26,11 +29,15 @@ class ClientController extends Controller
 
     public function create()
     {
+        Gate::authorize('create', Client::class);
+
         return Inertia::render('Clients/Create');
     }
 
     public function store(Request $request)
     {
+        Gate::authorize('create', Client::class);
+
         $validateData = $request->validate([
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:2048',
             'company_name' => 'nullable|string|max:255',
@@ -62,6 +69,7 @@ class ClientController extends Controller
     public function edit($id)
     {
         $client = Client::findOrFail($id);
+        Gate::authorize('view', $client);
 
         return Inertia::render('Clients/Edit', [
             'client' => $client,
@@ -71,6 +79,7 @@ class ClientController extends Controller
     public function update(Request $request, $id)
     {
         $client = Client::findOrFail($id);
+        Gate::authorize('update', $client);
 
         $validateData = $request->validate([
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:2048',
@@ -104,7 +113,8 @@ class ClientController extends Controller
 
     public function destroy($id)
     {
-        $client = Client::where('user_id', auth()->id())->findOrFail($id);
+        $client = Client::findOrFail($id);
+        Gate::authorize('delete', $client);
 
         // Before deleting the client, ensure all associated invoices have a client_info snapshot
         $invoices = Invoice::where('client_id', $client->id)->get();

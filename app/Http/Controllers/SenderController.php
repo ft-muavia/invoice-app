@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use App\Models\Sender;
 use App\Models\Invoice;
@@ -13,6 +14,8 @@ class SenderController extends Controller
 {
     public function index()
     {
+        Gate::authorize('viewAny', Sender::class);
+
         $senders = Sender::with('user')
             ->where('user_id', Auth::id())
             ->latest()
@@ -25,11 +28,15 @@ class SenderController extends Controller
 
     public function create()
     {
+        Gate::authorize('create', Sender::class);
+
         return Inertia::render('Senders/Create');
     }
 
     public function store(Request $request)
     {
+        Gate::authorize('create', Sender::class);
+
         $validateData = $request->validate([
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:2048',
             'sender_name' => 'nullable|string|max:255',
@@ -60,13 +67,16 @@ class SenderController extends Controller
 
     public function edit($id)
     {
-        $sender = Sender::with('user')->where('user_id', Auth::id())->findOrFail($id);
+        $sender = Sender::with('user')->findOrFail($id);
+        Gate::authorize('view', $sender);
+
         return Inertia::render('Senders/Edit', ['sender' => $sender]);
     }
 
     public function update(Request $request, $id)
     {
-        $sender = Sender::with('user')->where('user_id', Auth::id())->findOrFail($id);
+        $sender = Sender::with('user')->findOrFail($id);
+        Gate::authorize('update', $sender);
 
         $validated = $request->validate([
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:2048',
@@ -99,7 +109,8 @@ class SenderController extends Controller
 
     public function destroy($id)
     {
-        $sender = Sender::with('user')->where('user_id', Auth::id())->findOrFail($id);
+        $sender = Sender::with('user')->findOrFail($id);
+        Gate::authorize('delete', $sender);
 
         // Before deleting sender, ensure all associated invoices have a sender_info snapshot
         $invoices = Invoice::with('user')->where('sender_id', $sender->id)->get();
@@ -130,7 +141,6 @@ class SenderController extends Controller
             Storage::disk('public')->delete($sender->logo);
         }
 
-        $sender = Sender::findOrFail($id);
         $sender->delete();
 
         return redirect()->route('senders.index')->with('success', 'Sender deleted successfully.');

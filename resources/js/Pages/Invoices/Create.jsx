@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, Link } from "@inertiajs/react";
+import { useForm, Link, router } from "@inertiajs/react";
 import Layout from "@/Components/Layout";
 import {
     Image,
@@ -9,19 +9,42 @@ import {
     FileText,
     DollarSign,
     Trash2,
-    Download,
     Save,
     ChevronDown,
 } from "lucide-react";
 
-export default function Create({ items, senders }) {
+export default function Create({ items = [], senders = [], clients = [] }) {
+    // Form state with Inertia useForm at top level
+    const { data, setData, processing, errors } = useForm({
+        invoice_type: "Invoice",
+        invoice_number: `INV-${Date.now().toString().slice(-4)}`,
+        issue_date: new Date().toISOString().split("T")[0],
+        due_date: "",
+        client_id: "",
+        sender_id: "",
+        status: "pending",
+        terms: "",
+        description: "",
+    });
+
     // Select sender state
     const [selectedSender, setSelectedSender] = useState(null);
 
     const handleSelectSender = (sender) => {
         setSelectedSender(sender);
         setData("sender_id", sender.id);
-        document.getElementById("sender-modal").close();
+        const modal = document.getElementById("sender-modal");
+        if (modal) modal.close();
+    };
+
+    // Select client state
+    const [selectedClient, setSelectedClient] = useState(null);
+
+    const handleSelectClient = (client) => {
+        setSelectedClient(client);
+        setData("client_id", client.id);
+        const modal = document.getElementById("client-select-modal");
+        if (modal) modal.close();
     };
 
     // Custom field State
@@ -47,12 +70,14 @@ export default function Create({ items, senders }) {
         // Reset form
         setNewFieldLabel("");
         setNewFieldValue("");
-        document.getElementById("custom-field-modal").close();
+        const modal = document.getElementById("custom-field-modal");
+        if (modal) modal.close();
     };
 
     const removeCustomField = (id) => {
         setCustomFields(customFields.filter((f) => f.id !== id));
     };
+
     const renderCustomFields = (location) => {
         return customFields
             .filter((f) => f.location === location)
@@ -77,8 +102,18 @@ export default function Create({ items, senders }) {
                 </div>
             ));
     };
-    // Add Invoice Functionality
-    const [invoiceItems, setInvoiceItems] = useState([]);
+
+    // Invoice items functionality - start with 1 item row
+    const [invoiceItems, setInvoiceItems] = useState([
+        {
+            id: Date.now(),
+            item_id: "",
+            qty: 1,
+            unit_price: "",
+            tax: 0,
+            total: 0,
+        },
+    ]);
 
     const addItem = () => {
         setInvoiceItems([
@@ -88,7 +123,7 @@ export default function Create({ items, senders }) {
                 item_id: "",
                 qty: 1,
                 unit_price: "",
-                tax: "",
+                tax: 0,
                 total: 0,
             },
         ]);
@@ -105,7 +140,7 @@ export default function Create({ items, senders }) {
     };
 
     const handleItemChange = (rowId, itemId) => {
-        const selectedItem = items.find((item) => item.id === Number(itemId));
+        const selectedItem = (items || []).find((item) => item.id === Number(itemId));
 
         if (!selectedItem) return;
 
@@ -122,7 +157,7 @@ export default function Create({ items, senders }) {
                         ...row,
                         item_id: selectedItem.id,
                         unit_price: selectedItem.unit_price,
-                        tax: selectedItem.tax,
+                        tax: selectedItem.tax || 0,
                         total: total,
                     };
                 }
@@ -152,68 +187,52 @@ export default function Create({ items, senders }) {
 
     // Summary calculations
     const subtotal = invoiceItems.reduce(
-        (sum, row) => sum + Number(row.qty) * Number(row.unit_price || 0),
+        (sum, row) => sum + Number(row.qty || 0) * Number(row.unit_price || 0),
         0,
     );
 
     const totalTax = invoiceItems.reduce((sum, row) => {
-        const rowSubtotal = Number(row.qty) * Number(row.unit_price || 0);
+        const rowSubtotal = Number(row.qty || 0) * Number(row.unit_price || 0);
         return sum + (rowSubtotal * (Number(row.tax) || 0)) / 100;
     }, 0);
 
     const grandTotal = subtotal + totalTax;
-    // sender info
+
+    // sender info toggle
     const [showCompanyInfo, setShowCompanyInfo] = useState(false);
     const [companyInfo, setCompanyInfo] = useState("");
 
-    // client info
+    // client info toggle
     const [showClientInfo, setShowClientInfo] = useState(false);
     const [clientInfo, setClientInfo] = useState("");
-    // description
 
+    // description toggle
     const [showDescriptionInfo, setShowDescriptionInfo] = useState(false);
     const [DescriptionInfo, setDescriptionInfo] = useState("");
-    // Paymnet functionality
+
+    // Payment functionality
     const [showPayment, setShowPayment] = useState(false);
     const [payment, setPayment] = useState("");
-    const { data, setData, post, processing, errors } = useForm({
-        invoice_type: "Invoice",
-        invoice_number: "0001",
-        issue_date: "",
-        due_date: "",
-        client_id: "",
-        sender_id: "",
 
-        client_name: "",
-        client_email: "",
-        client_city: "",
-    });
-    const addClient = (e) => {
-        e.preventDefault();
-
-        post(route("clients.store"), {
-            preserveScroll: true,
-
-            onSuccess: () => {
-                document.getElementById("client-modal").close();
-
-                setData({
-                    ...data,
-                    client_name: "",
-                    client_email: "",
-                    client_city: "",
-                });
-            },
-        });
-    };
     const handleSubmit = (e) => {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
 
-        post(route("invoices.store"), {
-            data: {
-                ...data,
-                items: invoiceItems,
-            },
+        const validItems = invoiceItems.filter((i) => i.item_id);
+        if (validItems.length === 0) {
+            alert("Please select at least one item for the invoice.");
+            return;
+        }
+
+        router.post(route("invoices.store"), {
+            ...data,
+            description: DescriptionInfo || data.description,
+            terms: data.terms,
+            items: validItems.map((i) => ({
+                item_id: i.item_id,
+                qty: Number(i.qty),
+                unit_price: Number(i.unit_price),
+                tax: Number(i.tax || 0),
+            })),
         });
     };
     return (
@@ -462,123 +481,113 @@ export default function Create({ items, senders }) {
                                             <User size={28} />
                                         </div>
 
-                                        <div>
-                                            <h2 className="text-2xl text-gray-500">
-                                                Recipient name
+                                        <div className="space-y-2">
+                                            <h2 className="text-2xl font-bold">
+                                                {selectedClient
+                                                    ? (selectedClient.company_name ||
+                                                       [selectedClient.first_name, selectedClient.last_name]
+                                                           .filter(Boolean)
+                                                           .join(" "))
+                                                    : "Select a client"}
                                             </h2>
 
-                                            <p className="text-gray-500 font-semibold">
-                                                Recipient email
+                                            <p className="text-gray-600">
+                                                {selectedClient?.email ?? "-"}
                                             </p>
 
-                                            <p className="text-gray-500 font-semibold">
-                                                Recipient City Name, Country
+                                            <p className="text-gray-600">
+                                                {[selectedClient?.address_line_1, selectedClient?.city, selectedClient?.country]
+                                                    .filter(Boolean)
+                                                    .join(", ") || "-"}
                                             </p>
 
-                                            {/* Open Button */}
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    document
-                                                        .getElementById(
-                                                            "client-modal",
-                                                        )
-                                                        .showModal()
-                                                }
-                                                className="mt-4 text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-2"
-                                            >
-                                                <Plus size={18} />
-                                                Add Client
-                                            </button>
+                                            <div className="flex items-center gap-3 pt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const modal = document.getElementById("client-select-modal");
+                                                        if (modal) modal.showModal();
+                                                    }}
+                                                    className="text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-2"
+                                                >
+                                                    <User size={18} />
+                                                    {selectedClient ? "Change Client" : "Select Client"}
+                                                </button>
 
-                                            {/* Modal */}
+                                                <Link
+                                                    href={route("clients.create")}
+                                                    className="text-gray-500 hover:text-gray-700 text-sm flex items-center gap-1"
+                                                >
+                                                    <Plus size={16} /> New Client
+                                                </Link>
+                                            </div>
+
+                                            {/* Client Selection Modal */}
                                             <dialog
-                                                id="client-modal"
+                                                id="client-select-modal"
                                                 className="rounded-lg p-0 backdrop:bg-black/40"
                                             >
-                                                <div className="w-[400px] p-6">
+                                                <div className="w-[450px] p-6">
                                                     <h3 className="text-xl font-bold mb-6">
-                                                        Add New Client
+                                                        Select Client
                                                     </h3>
 
-                                                    <form onSubmit={addClient}>
-                                                        <div className="mb-4">
-                                                            <label className="block text-sm font-semibold mb-2">
-                                                                Client Name
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                onChange={(e) =>
-                                                                    setData(
-                                                                        "client_name",
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                placeholder="Enter client name"
-                                                                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            />
-                                                        </div>
+                                                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                                                        {clients?.length > 0 ? (
+                                                            clients.map((client) => (
+                                                                <button
+                                                                    type="button"
+                                                                    key={client.id}
+                                                                    onClick={() => handleSelectClient(client)}
+                                                                    className={`w-full text-left p-3 border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition ${
+                                                                        selectedClient?.id === client.id
+                                                                            ? "border-blue-600 bg-blue-50"
+                                                                            : "border-gray-200"
+                                                                    }`}
+                                                                >
+                                                                    <p className="font-semibold text-gray-800">
+                                                                        {client.company_name ||
+                                                                            [client.first_name, client.last_name]
+                                                                                .filter(Boolean)
+                                                                                .join(" ")}
+                                                                    </p>
+                                                                    <p className="text-sm text-gray-500">
+                                                                        {client.email || "No email"}
+                                                                    </p>
+                                                                    <p className="text-sm text-gray-500">
+                                                                        {[client.city, client.country]
+                                                                            .filter(Boolean)
+                                                                            .join(", ")}
+                                                                    </p>
+                                                                </button>
+                                                            ))
+                                                        ) : (
+                                                            <div className="text-center py-4">
+                                                                <p className="text-gray-500 text-sm mb-3">
+                                                                    No clients found.
+                                                                </p>
+                                                                <Link
+                                                                    href={route("clients.create")}
+                                                                    className="text-blue-600 hover:underline text-sm font-semibold"
+                                                                >
+                                                                    + Create a client
+                                                                </Link>
+                                                            </div>
+                                                        )}
+                                                    </div>
 
-                                                        <div className="mb-6">
-                                                            <label className="block text-sm font-semibold mb-2">
-                                                                Email
-                                                            </label>
-                                                            <input
-                                                                type="email"
-                                                                onChange={(e) =>
-                                                                    setData(
-                                                                        "client_email",
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                placeholder="Enter email Address"
-                                                                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            />
-                                                        </div>
-
-                                                        <div className="mb-6">
-                                                            <label className="block text-sm font-semibold mb-2">
-                                                                City
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                onChange={(e) =>
-                                                                    setData(
-                                                                        "client_city",
-                                                                        e.target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                placeholder="Enter City Name"
-                                                                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            />
-                                                        </div>
-
-                                                        <div className="flex justify-end gap-3">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    document
-                                                                        .getElementById(
-                                                                            "client-modal",
-                                                                        )
-                                                                        .close()
-                                                                }
-                                                                className="px-4 py-2 rounded-lg border hover:bg-gray-100"
-                                                            >
-                                                                Cancel
-                                                            </button>
-
-                                                            <button
-                                                                type="submit"
-                                                                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-                                                            >
-                                                                Add Client
-                                                            </button>
-                                                        </div>
-                                                    </form>
+                                                    <div className="flex justify-end gap-3 mt-6">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const modal = document.getElementById("client-select-modal");
+                                                                if (modal) modal.close();
+                                                            }}
+                                                            className="px-4 py-2 rounded-lg border hover:bg-gray-100"
+                                                        >
+                                                            Close
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </dialog>
                                         </div>
@@ -678,13 +687,14 @@ export default function Create({ items, senders }) {
                                                             Select Item
                                                         </option>
 
-                                                        {items.map((item) => (
+                                                        {(items || []).map((item) => (
                                                             <option
+                                                                key={item.id}
                                                                 value={String(
                                                                     item.id,
                                                                 )}
                                                             >
-                                                                {item.item_name}
+                                                                {item.item_name} (${Number(item.unit_price).toFixed(2)})
                                                             </option>
                                                         ))}
                                                     </select>
@@ -805,6 +815,8 @@ export default function Create({ items, senders }) {
                                 </h2>
                                 <textarea
                                     placeholder="Enter terms and conditions..."
+                                    value={data.terms}
+                                    onChange={(e) => setData("terms", e.target.value)}
                                     className="w-full border rounded-lg p-2"
                                     rows="4"
                                 />
@@ -980,11 +992,22 @@ export default function Create({ items, senders }) {
                         Download PDF
                     </a> */}
 
-                    <button className="w-full flex justify-center bg-blue-700 text-white rounded-xl py-4 font-semibold">
-                        <span className="flex items-center gap-2">
-                            <Save /> Save Invoice
-                        </span>
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={processing}
+                        className="w-full flex justify-center items-center gap-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white rounded-xl py-4 font-semibold transition cursor-pointer"
+                    >
+                        <Save size={18} /> {processing ? "Saving..." : "Save Invoice"}
                     </button>
+
+                    {errors && Object.keys(errors).length > 0 && (
+                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs space-y-1">
+                            {Object.entries(errors).map(([key, err]) => (
+                                <p key={key}>• {err}</p>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </Layout>

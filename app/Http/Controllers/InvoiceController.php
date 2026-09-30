@@ -11,6 +11,7 @@ use App\Models\Client;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
@@ -18,6 +19,8 @@ class InvoiceController extends Controller
 
     public function index()
     {
+        Gate::authorize('viewAny', Invoice::class);
+
         $invoices = Invoice::with(['client', 'sender'])
             ->where('user_id', Auth::id())
             ->latest()
@@ -30,6 +33,8 @@ class InvoiceController extends Controller
 
     public function create()
     {
+        Gate::authorize('create', Invoice::class);
+
         $items = Item::where('user_id', Auth::id())->get();
         $senders = Sender::where('user_id', Auth::id())->get();
         $clients = Client::where('user_id', Auth::id())->get();
@@ -43,6 +48,8 @@ class InvoiceController extends Controller
 
     public function store(Request $request)
     {
+        Gate::authorize('create', Invoice::class);
+
         $userId = Auth::id();
 
         $validated = $request->validate([
@@ -172,9 +179,8 @@ class InvoiceController extends Controller
     // Edit Page dikhane ke liye
     public function edit($id)
     {
-        $invoice = Invoice::with(['items', 'client', 'sender'])
-            ->where('user_id', Auth::id())
-            ->findOrFail($id);
+        $invoice = Invoice::with(['items', 'client', 'sender'])->findOrFail($id);
+        Gate::authorize('view', $invoice);
 
         $items = Item::where('user_id', Auth::id())->get();
         $senders = Sender::where('user_id', Auth::id())->get();
@@ -190,9 +196,8 @@ class InvoiceController extends Controller
 
     public function show($id)
     {
-        $invoice = Invoice::with(['items.item', 'client', 'sender'])
-            ->where('user_id', Auth::id())
-            ->findOrFail($id);
+        $invoice = Invoice::with(['items.item', 'client', 'sender'])->findOrFail($id);
+        Gate::authorize('view', $invoice);
 
         return Inertia::render('Invoices/Show', [
             'invoice' => $invoice,
@@ -230,7 +235,8 @@ class InvoiceController extends Controller
             'items.*.description' => 'nullable|string',
         ]);
 
-        $invoice = Invoice::with(['client', 'sender'])->where('user_id', Auth::id())->findOrFail($id);
+        $invoice = Invoice::with(['client', 'sender'])->findOrFail($id);
+        Gate::authorize('update', $invoice);
 
         $calcSubtotal = 0;
         $calcTax = 0;
@@ -337,7 +343,8 @@ class InvoiceController extends Controller
     }
     public function destroy($id)
     {
-        $invoice = Invoice::with(['items'])->where('user_id', Auth::id())->findOrFail($id);
+        $invoice = Invoice::with(['items'])->findOrFail($id);
+        Gate::authorize('delete', $invoice);
 
         if ($invoice->logo && Storage::disk('public')->exists($invoice->logo)) {
             Storage::disk('public')->delete($invoice->logo);
@@ -357,7 +364,9 @@ class InvoiceController extends Controller
             'status' => 'required|string|in:pending,approved,rejected',
         ]);
 
-        $invoice = Invoice::where('user_id', Auth::id())->findOrFail($id);
+        $invoice = Invoice::findOrFail($id);
+        Gate::authorize('updateStatus', $invoice);
+
         $invoice->update([
             'status' => $validated['status'],
         ]);
@@ -371,15 +380,13 @@ class InvoiceController extends Controller
             'client',
             'sender',
             'items.item'
-        ])
-        ->where('user_id', Auth::id())
-        ->findOrFail($id);
+        ])->findOrFail($id);
 
+        Gate::authorize('downloadPdf', $invoice);
 
         $pdf = Pdf::loadView('pdf.invoice', [
             'invoice' => $invoice
         ]);
-
 
         return $pdf->download(
             'invoice-'.$invoice->invoice_number.'.pdf'
