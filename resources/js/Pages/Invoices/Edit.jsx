@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Layout from "../../Components/Layout";
-import { useForm } from "@inertiajs/react";
+import { useForm, router } from "@inertiajs/react";
 import {
     Image,
     Plus,
@@ -99,14 +99,26 @@ export default function Edit({ invoice, items }) {
     const [showPayment, setShowPayment] = useState(!!invoice.payment);
     const [payment, setPayment] = useState(invoice.payment ?? "");
 
+    const [logoPreview, setLogoPreview] = useState(
+        invoice.logo
+            ? invoice.logo.startsWith("http") || invoice.logo.startsWith("/")
+                ? invoice.logo
+                : `/storage/${invoice.logo}`
+            : null
+    );
+
     // Prefill main form data from old invoice
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, processing, errors } = useForm({
+        logo: null,
         invoice_type: invoice.invoice_type ?? "Invoice",
         invoice_number: invoice.invoice_number ?? "0001",
         issue_date: invoice.issue_date ?? "",
         due_date: invoice.due_date ?? "",
         client_id: invoice.client_id ?? "",
+        sender_id: invoice.sender_id ?? "",
         terms: invoice.terms ?? "",
+        description: invoice.description ?? "",
+        status: invoice.status ?? "pending",
         payment: invoice.payment ?? "",
     });
 
@@ -126,13 +138,31 @@ export default function Edit({ invoice, items }) {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        put(route("invoices.update", invoice.id), {
-            data: {
+        const validItems = invoiceItems.filter((i) => i.item_id);
+        if (validItems.length === 0) {
+            alert("Please select at least one item for the invoice.");
+            return;
+        }
+
+        router.post(
+            route("invoices.update", invoice.id),
+            {
+                _method: "put",
                 ...data,
+                description: clientInfo || data.description,
+                terms: data.terms,
                 payment: payment,
-                items: invoiceItems,
+                items: validItems.map((i) => ({
+                    item_id: i.item_id,
+                    qty: Number(i.qty),
+                    unit_price: Number(i.unit_price),
+                    tax: Number(i.tax || 0),
+                })),
             },
-        });
+            {
+                forceFormData: true,
+            }
+        );
     };
 
     return (
@@ -146,22 +176,57 @@ export default function Edit({ invoice, items }) {
                             <div className="flex gap-2 py-4 justify-between items-center">
                                 {/* Logo */}
                                 <div>
-                                    <div className="border-2 border-dashed rounded-lg p-4 flex items-center justify-center cursor-pointer hover:border-blue-500">
-                                        {invoice.logo ? (
-                                            <img
-                                                src={invoice.logo}
-                                                alt="Company Logo"
-                                                className="h-16 object-contain"
-                                            />
+                                    <input
+                                        id="invoice-logo-input-edit"
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                setData("logo", file);
+                                                setLogoPreview(URL.createObjectURL(file));
+                                            }
+                                        }}
+                                    />
+                                    <div
+                                        onClick={() => document.getElementById("invoice-logo-input-edit")?.click()}
+                                        className="border-2 border-dashed rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 transition min-w-[200px] min-h-[80px] group bg-gray-50/50 hover:bg-blue-50/20"
+                                    >
+                                        {logoPreview ? (
+                                            <div className="relative flex flex-col items-center">
+                                                <img
+                                                    src={logoPreview}
+                                                    alt="Company Logo"
+                                                    className="max-h-16 max-w-[180px] object-contain rounded"
+                                                />
+                                                <span className="text-[11px] text-blue-600 font-semibold mt-1 group-hover:underline">
+                                                    Click to change
+                                                </span>
+                                            </div>
                                         ) : (
-                                            <div className="flex items-center gap-3 text-gray-500">
+                                            <div className="flex items-center gap-3 text-gray-500 group-hover:text-blue-600 transition">
                                                 <Image size={28} />
-                                                <span className="text-sm">
+                                                <span className="text-sm font-medium">
                                                     Choose logo or drop it here
                                                 </span>
                                             </div>
                                         )}
                                     </div>
+                                    {logoPreview && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setData("logo", null);
+                                                setLogoPreview(null);
+                                                const input = document.getElementById("invoice-logo-input-edit");
+                                                if (input) input.value = "";
+                                            }}
+                                            className="text-xs text-red-500 hover:text-red-700 font-medium mt-1 inline-block"
+                                        >
+                                            Remove logo
+                                        </button>
+                                    )}
                                 </div>
                                 {/* Invoice Type */}
                                 <div className="flex items-center gap-2">

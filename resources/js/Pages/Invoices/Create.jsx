@@ -16,6 +16,7 @@ import {
 export default function Create({ items = [], senders = [], clients = [] }) {
     // Form state with Inertia useForm at top level
     const { data, setData, processing, errors } = useForm({
+        logo: null,
         invoice_type: "Invoice",
         invoice_number: `INV-${Date.now().toString().slice(-4)}`,
         issue_date: new Date().toISOString().split("T")[0],
@@ -26,6 +27,8 @@ export default function Create({ items = [], senders = [], clients = [] }) {
         terms: "",
         description: "",
     });
+
+    const [logoPreview, setLogoPreview] = useState(null);
 
     // Select sender state
     const [selectedSender, setSelectedSender] = useState(null);
@@ -223,17 +226,23 @@ export default function Create({ items = [], senders = [], clients = [] }) {
             return;
         }
 
-        router.post(route("invoices.store"), {
-            ...data,
-            description: DescriptionInfo || data.description,
-            terms: data.terms,
-            items: validItems.map((i) => ({
-                item_id: i.item_id,
-                qty: Number(i.qty),
-                unit_price: Number(i.unit_price),
-                tax: Number(i.tax || 0),
-            })),
-        });
+        router.post(
+            route("invoices.store"),
+            {
+                ...data,
+                description: DescriptionInfo || data.description,
+                terms: data.terms,
+                items: validItems.map((i) => ({
+                    item_id: i.item_id,
+                    qty: Number(i.qty),
+                    unit_price: Number(i.unit_price),
+                    tax: Number(i.tax || 0),
+                })),
+            },
+            {
+                forceFormData: true,
+            },
+        );
     };
     return (
         <Layout>
@@ -246,15 +255,57 @@ export default function Create({ items = [], senders = [], clients = [] }) {
                         <div className="flex gap-2 py-4 justify-between items-center">
                             {/* Logo */}
                             <div>
-                                <div className="border-2 border-dashed rounded-lg p-4 flex items-center justify-center cursor-pointer hover:border-blue-500">
-                                    <div className="flex items-center gap-3 text-gray-500">
-                                        <Image size={28} />
-
-                                        <span className="text-sm">
-                                            Choose logo or drop it here
-                                        </span>
-                                    </div>
+                                <input
+                                    id="invoice-logo-input"
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setData("logo", file);
+                                            setLogoPreview(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                />
+                                <div
+                                    onClick={() => document.getElementById("invoice-logo-input")?.click()}
+                                    className="border-2 border-dashed rounded-lg p-3 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 transition min-w-[200px] min-h-[80px] group bg-gray-50/50 hover:bg-blue-50/20"
+                                >
+                                    {logoPreview ? (
+                                        <div className="relative flex flex-col items-center">
+                                            <img
+                                                src={logoPreview}
+                                                alt="Logo preview"
+                                                className="max-h-16 max-w-[180px] object-contain rounded"
+                                            />
+                                            <span className="text-[11px] text-blue-600 font-semibold mt-1 group-hover:underline">
+                                                Click to change
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-3 text-gray-500 group-hover:text-blue-600 transition">
+                                            <Image size={28} />
+                                            <span className="text-sm font-medium">
+                                                Choose logo or drop it here
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
+                                {logoPreview && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setData("logo", null);
+                                            setLogoPreview(null);
+                                            const input = document.getElementById("invoice-logo-input");
+                                            if (input) input.value = "";
+                                        }}
+                                        className="text-xs text-red-500 hover:text-red-700 font-medium mt-1 inline-block"
+                                    >
+                                        Remove logo
+                                    </button>
+                                )}
                             </div>
                             {/* Invoice Type */}
                             <div className="flex items-center gap-2">

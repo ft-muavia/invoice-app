@@ -53,6 +53,7 @@ class InvoiceController extends Controller
         $userId = Auth::id();
 
         $validated = $request->validate([
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:2048',
             'invoice_type' => 'required|string',
             'invoice_number' => 'required|string',
             'issue_date' => 'required|date',
@@ -151,7 +152,13 @@ class InvoiceController extends Controller
             }
         }
 
+        $logoPath = null;
+        if ($request->hasFile('logo')) {
+            $logoPath = $request->file('logo')->store('invoice_logos', 'public');
+        }
+
         $invoice = Invoice::create([
+            'logo' => $logoPath,
             'invoice_type' => $validated['invoice_type'],
             'invoice_number' => $validated['invoice_number'],
             'issue_date' => $validated['issue_date'],
@@ -209,6 +216,7 @@ class InvoiceController extends Controller
         $userId = Auth::id();
 
         $validated = $request->validate([
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:2048',
             'invoice_type' => 'required|string',
             'invoice_number' => 'required|string',
             'issue_date' => 'required|date',
@@ -314,7 +322,16 @@ class InvoiceController extends Controller
             $senderInfo = null;
         }
 
+        $logoPath = $invoice->logo;
+        if ($request->hasFile('logo')) {
+            if ($invoice->logo && Storage::disk('public')->exists($invoice->logo)) {
+                Storage::disk('public')->delete($invoice->logo);
+            }
+            $logoPath = $request->file('logo')->store('invoice_logos', 'public');
+        }
+
         $invoice->update([
+            'logo' => $logoPath,
             'invoice_type' => $validated['invoice_type'],
             'invoice_number' => $validated['invoice_number'],
             'issue_date' => $validated['issue_date'],
