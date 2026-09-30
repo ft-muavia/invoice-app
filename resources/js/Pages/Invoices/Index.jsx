@@ -41,9 +41,29 @@ export default function Index({ invoices }) {
                                     </p>
                                 </div>
 
-                                <span className="bg-yellow-100 text-yellow-700 text-xs px-3 py-1 rounded-full">
-                                    Pending
-                                </span>
+                                <div>
+                                    <select
+                                        value={invoice.status || "pending"}
+                                        onChange={(e) =>
+                                            router.patch(
+                                                route("invoices.status", invoice.id),
+                                                { status: e.target.value },
+                                                { preserveScroll: true }
+                                            )
+                                        }
+                                        className={`text-xs font-semibold px-2.5 py-1 rounded-full border cursor-pointer ${
+                                            invoice.status === "approved"
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                                                : invoice.status === "rejected"
+                                                ? "bg-rose-50 text-rose-700 border-rose-300"
+                                                : "bg-amber-50 text-amber-700 border-amber-300"
+                                        }`}
+                                    >
+                                        <option value="pending">Pending</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="rejected">Rejected</option>
+                                    </select>
+                                </div>
                             </div>
 
                             {/* Details */}
