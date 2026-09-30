@@ -30,29 +30,42 @@ class InvoiceController extends Controller
 
     public function create()
     {
-        $items = Item::with(['user'])->where('user_id', Auth::id())->get();
-        $senders = Sender::with(['user'])->where('user_id', Auth::id())->get();
+        $items = Item::where('user_id', Auth::id())->get();
+        $senders = Sender::where('user_id', Auth::id())->get();
+        $clients = Client::where('user_id', Auth::id())->get();
 
         return Inertia::render('Invoices/Create', [
             'items' => $items,
             'senders' => $senders,
+            'clients' => $clients,
         ]);
     }
 
     public function store(Request $request)
     {
+        $userId = Auth::id();
+
         $validated = $request->validate([
             'invoice_type' => 'required|string',
             'invoice_number' => 'required|string',
             'issue_date' => 'required|date',
             'due_date' => 'required|date',
-            'client_id' => 'nullable|exists:clients,id',
-            'sender_id' => 'nullable|exists:senders,id',
+            'client_id' => [
+                'nullable',
+                Rule::exists('clients', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
+            'sender_id' => [
+                'nullable',
+                Rule::exists('senders', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
             'status' => 'nullable|string|in:pending,approved,rejected',
             'terms' => 'nullable|string',
             'description' => 'nullable|string',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:items,id',
+            'items.*.item_id' => [
+                'required',
+                Rule::exists('items', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
             'items.*.qty' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tax' => 'nullable|numeric|min:0',
@@ -90,7 +103,7 @@ class InvoiceController extends Controller
 
         $clientInfo = null;
         if (!empty($validated['client_id'])) {
-            $client = Client::find($validated['client_id']);
+            $client = Client::where('user_id', $userId)->find($validated['client_id']);
             if ($client) {
                 $clientInfo = [
                     'id' => $client->id,
@@ -111,7 +124,7 @@ class InvoiceController extends Controller
 
         $senderInfo = null;
         if (!empty($validated['sender_id'])) {
-            $sender = Sender::find($validated['sender_id']);
+            $sender = Sender::where('user_id', $userId)->find($validated['sender_id']);
             if ($sender) {
                 $senderInfo = [
                     'id' => $sender->id,
@@ -131,7 +144,6 @@ class InvoiceController extends Controller
             }
         }
 
-        $user_id = Auth::id();
         $invoice = Invoice::create([
             'invoice_type' => $validated['invoice_type'],
             'invoice_number' => $validated['invoice_number'],
@@ -144,7 +156,7 @@ class InvoiceController extends Controller
             'terms' => $validated['terms'] ?? null,
             'description' => $validated['description'] ?? null,
             'status' => $validated['status'] ?? 'pending',
-            'user_id' => $user_id,
+            'user_id' => $userId,
             'subtotal' => round($calcSubtotal, 2),
             'tax' => round($calcTax, 2),
             'total' => round($calcTotal, 2),
@@ -156,18 +168,23 @@ class InvoiceController extends Controller
 
         return redirect()->route('invoices.index')->with('success', 'Invoice created successfully.');
     }
-     // Edit Page dikhane ke liye
+
+    // Edit Page dikhane ke liye
     public function edit($id)
     {
         $invoice = Invoice::with(['items', 'client', 'sender'])
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
-        $items = Item::with(['user'])->where('user_id', Auth::id())->get();
+        $items = Item::where('user_id', Auth::id())->get();
+        $senders = Sender::where('user_id', Auth::id())->get();
+        $clients = Client::where('user_id', Auth::id())->get();
 
         return Inertia::render('Invoices/Edit', [
             'invoice' => $invoice,
             'items' => $items,
+            'senders' => $senders,
+            'clients' => $clients,
         ]);
     }
 
@@ -184,18 +201,29 @@ class InvoiceController extends Controller
 
     public function update(Request $request, $id)
     {
+        $userId = Auth::id();
+
         $validated = $request->validate([
             'invoice_type' => 'required|string',
             'invoice_number' => 'required|string',
             'issue_date' => 'required|date',
             'due_date' => 'required|date',
-            'client_id' => 'nullable|exists:clients,id',
-            'sender_id' => 'nullable|exists:senders,id',
+            'client_id' => [
+                'nullable',
+                Rule::exists('clients', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
+            'sender_id' => [
+                'nullable',
+                Rule::exists('senders', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
             'status' => 'nullable|string|in:pending,approved,rejected',
             'terms' => 'nullable|string',
             'description' => 'nullable|string',
             'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:items,id',
+            'items.*.item_id' => [
+                'required',
+                Rule::exists('items', 'id')->where(fn ($query) => $query->where('user_id', $userId)),
+            ],
             'items.*.qty' => 'required|numeric|min:0.01',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.tax' => 'nullable|numeric|min:0',
@@ -235,7 +263,7 @@ class InvoiceController extends Controller
 
         $clientInfo = $invoice->client_info;
         if (!empty($validated['client_id'])) {
-            $client = Client::find($validated['client_id']);
+            $client = Client::where('user_id', $userId)->find($validated['client_id']);
             if ($client) {
                 $clientInfo = [
                     'id' => $client->id,
@@ -252,11 +280,13 @@ class InvoiceController extends Controller
                     'country' => $client->country,
                 ];
             }
+        } elseif (array_key_exists('client_id', $validated) && is_null($validated['client_id'])) {
+            $clientInfo = null;
         }
 
         $senderInfo = $invoice->sender_info;
         if (!empty($validated['sender_id'])) {
-            $sender = Sender::find($validated['sender_id']);
+            $sender = Sender::where('user_id', $userId)->find($validated['sender_id']);
             if ($sender) {
                 $senderInfo = [
                     'id' => $sender->id,
@@ -274,6 +304,8 @@ class InvoiceController extends Controller
                     'tax_registration_number' => $sender->tax_registration_number,
                 ];
             }
+        } elseif (array_key_exists('sender_id', $validated) && is_null($validated['sender_id'])) {
+            $senderInfo = null;
         }
 
         $invoice->update([
