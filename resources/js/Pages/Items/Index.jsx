@@ -1,8 +1,14 @@
 import React from "react";
-import { Link } from "@inertiajs/react";
+import { Link, router } from "@inertiajs/react";
 import Layout from "../../Components/Layout";
 
 export default function Index({ items }) {
+    const handleDelete = (item) => {
+        if (confirm(`Are you sure you want to delete "${item.item_name}"?`)) {
+            router.delete(route("items.destroy", item.id));
+        }
+    };
+
     return (
         <Layout>
             <div className="flex items-center justify-between mb-6">
@@ -62,6 +68,7 @@ export default function Index({ items }) {
                                             </Link>
 
                                             <button
+                                                onClick={() => handleDelete(item)}
                                                 className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                                             >
                                                 Delete
