@@ -8,6 +8,7 @@ use Inertia\Inertia;
 use App\Models\Item;
 use App\Models\Sender;
 use App\Models\Client;
+use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 
@@ -301,7 +302,14 @@ class InvoiceController extends Controller
     {
         $invoice = Invoice::with(['items'])->where('user_id', Auth::id())->findOrFail($id);
 
+        if ($invoice->logo && Storage::disk('public')->exists($invoice->logo)) {
+            Storage::disk('public')->delete($invoice->logo);
+        }
+
         $invoice->items()->delete();
+
+        $invoice = Invoice::findOrFail($id);
+        $invoice->delete();
 
         return redirect()
             ->route('invoices.index')

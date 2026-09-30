@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Client;
 use App\Models\Invoice;
 use Inertia\Inertia;
@@ -89,6 +90,9 @@ class ClientController extends Controller
         ]);
 
         if ($request->hasFile('logo')) {
+            if ($client->logo && Storage::disk('public')->exists($client->logo)) {
+                Storage::disk('public')->delete($client->logo);
+            }
             $logoPath = $request->file('logo')->store('logos', 'public');
             $validateData['logo'] = $logoPath;
         }
@@ -123,6 +127,11 @@ class ClientController extends Controller
                     ],
                 ]);
             }
+        }
+
+        // Clean up client logo file from storage
+        if ($client->logo && Storage::disk('public')->exists($client->logo)) {
+            Storage::disk('public')->delete($client->logo);
         }
 
         $client->delete();

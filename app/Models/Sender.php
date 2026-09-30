@@ -8,6 +8,7 @@ class Sender extends Model
 {
     protected $fillable = [
         'user_id',
+        'logo',
         'first_name',
         'last_name',
         'sender_name',
@@ -26,5 +27,10 @@ class Sender extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function sender()
+    {
+        return $this->hasMany(Invoice::class);
     }
 }

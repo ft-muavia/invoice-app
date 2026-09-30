@@ -3,15 +3,18 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use App\Models\Sender;
+use App\Models\Invoice;
+use Illuminate\Support\Facades\Auth;
 
 class SenderController extends Controller
 {
     public function index()
     {
         $senders = Sender::with('user')
-            ->where('user_id', auth()->id)
+            ->where('user_id', Auth::id())
             ->latest()
             ->get();
 
@@ -48,33 +51,89 @@ class SenderController extends Controller
             $logoPath = $request->file('logo')->store('logos', 'public');
             $validateData['logo'] = $logoPath;
         }
-        $validateData['user_id'] = auth()->id;
+        $validateData['user_id'] = Auth::id();
         
         Sender::create($validateData);
 
         return inertia()->location(route('senders.index'));
     }
 
-    public function edit($id){
-        $sender = Sender::findOrFail($id);
-        return Inertia::render('Senders/Edit',['sender' => $sender,]);
+    public function edit($id)
+    {
+        $sender = Sender::with('user')->where('user_id', Auth::id())->findOrFail($id);
+        return Inertia::render('Senders/Edit', ['sender' => $sender]);
     }
 
     public function update(Request $request, $id)
-{
-    $sender = Sender::findOrFail($id);
+    {
+        $sender = Sender::with('user')->where('user_id', Auth::id())->findOrFail($id);
 
-    $validated = $request->validate([
-        'first_name' => 'required|string',
-        'last_name' => 'required|string',
-        'sender_name' => 'nullable|string',
-        'email' => 'nullable|email',
-        'phone_number' => 'nullable|string',
-        'country' => 'nullable|string',
-    ]);
+        $validated = $request->validate([
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,svg,webp|max:2048',
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'sender_name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|unique:senders,email,' . $sender->id,
+            'phone_number' => 'nullable|string|max:20',
+            'country' => 'nullable|string|max:255',
+            'address_1' => 'nullable|string|max:255',
+            'address_2' => 'nullable|string|max:255',
+            'postal_code' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
+            'website' => 'nullable|string|max:255',
+            'tax_registration_number' => 'nullable|string|max:255',
+        ]);
 
-    $sender->update($validated);
+        if ($request->hasFile('logo')) {
+            // Delete old logo from storage if it exists
+            if ($sender->logo && Storage::disk('public')->exists($sender->logo)) {
+                Storage::disk('public')->delete($sender->logo);
+            }
+            $validated['logo'] = $request->file('logo')->store('logos', 'public');
+        }
 
-    return redirect()->route('senders.index')->with('success', 'Sender updated successfully.');
-}
+        $sender->update($validated);
+
+        return redirect()->route('senders.index')->with('success', 'Sender updated successfully.');
+    }
+
+    public function destroy($id)
+    {
+        $sender = Sender::with('user')->where('user_id', Auth::id())->findOrFail($id);
+
+        // Before deleting sender, ensure all associated invoices have a sender_info snapshot
+        $invoices = Invoice::with('user')->where('sender_id', $sender->id)->get();
+        foreach ($invoices as $inv) {
+            if (empty($inv->sender_info)) {
+                $inv->update([
+                    'sender_info' => [
+                        'id' => $sender->id,
+                        'sender_name' => $sender->sender_name,
+                        'first_name' => $sender->first_name,
+                        'last_name' => $sender->last_name,
+                        'name' => $sender->sender_name ?: trim(($sender->first_name ?? '') . ' ' . ($sender->last_name ?? '')),
+                        'email' => $sender->email,
+                        'phone_number' => $sender->phone_number,
+                        'address_1' => $sender->address_1,
+                        'address_2' => $sender->address_2,
+                        'city' => $sender->city,
+                        'postal_code' => $sender->postal_code,
+                        'country' => $sender->country,
+                        'tax_registration_number' => $sender->tax_registration_number,
+                    ],
+                ]);
+            }
+        }
+
+        // Clean up logo from storage
+        if ($sender->logo && Storage::disk('public')->exists($sender->logo)) {
+            Storage::disk('public')->delete($sender->logo);
+        }
+
+        $sender = Sender::findOrFail($id);
+
+        $sender->delete();
+
+        return redirect()->route('senders.index')->with('success', 'Sender deleted successfully.');
+    }
 }

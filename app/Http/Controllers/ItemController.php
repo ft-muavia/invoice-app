@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Item;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
 
 class ItemController extends Controller
 {
@@ -12,7 +13,7 @@ class ItemController extends Controller
     public function index()
     {
         $items = Item::with('user')
-            ->where('user_id', auth()->id())
+            ->where('user_id', Auth::id())
             ->latest()
             ->get();
 
@@ -35,7 +36,7 @@ class ItemController extends Controller
             'tax' => 'nullable|numeric|min:0',
         ]);
 
-        $validateData['user_id'] = auth()->id();
+        $validateData['user_id'] = Auth::id();
         
         Item::create($validateData);
 
