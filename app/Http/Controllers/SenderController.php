@@ -130,8 +130,6 @@ class SenderController extends Controller
             Storage::disk('public')->delete($sender->logo);
         }
 
-        $sender = Sender::findOrFail($id);
-
         $sender->delete();
 
         return redirect()->route('senders.index')->with('success', 'Sender deleted successfully.');

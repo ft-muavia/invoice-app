@@ -29,7 +29,7 @@ class Sender extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function sender()
+    public function invoices()
     {
         return $this->hasMany(Invoice::class);
     }

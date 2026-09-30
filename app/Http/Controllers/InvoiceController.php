@@ -307,8 +307,6 @@ class InvoiceController extends Controller
         }
 
         $invoice->items()->delete();
-
-        $invoice = Invoice::findOrFail($id);
         $invoice->delete();
 
         return redirect()
