@@ -11,6 +11,7 @@ use App\Models\Client;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
 {
