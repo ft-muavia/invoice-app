@@ -27,6 +27,7 @@ class Invoice extends Model
         'tax',
         'total',
         'terms',
+        'status',
     ];
 
     protected function casts(): array
