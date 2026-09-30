@@ -1,4 +1,5 @@
-import { useState, useForm, Link } from "react";
+import { useState } from "react";
+import { useForm, Link } from "@inertiajs/react";
 import Layout from "@/Components/Layout";
 import {
     Image,
