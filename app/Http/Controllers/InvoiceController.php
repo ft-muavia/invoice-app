@@ -47,6 +47,7 @@ class InvoiceController extends Controller
             'due_date' => 'required|date',
             'client_id' => 'nullable|exists:clients,id',
             'sender_id' => 'nullable|exists:senders,id',
+            'status' => 'nullable|string|in:pending,approved,rejected',
             'terms' => 'nullable|string',
             'description' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -141,6 +142,7 @@ class InvoiceController extends Controller
             'sender_info' => $senderInfo,
             'terms' => $validated['terms'] ?? null,
             'description' => $validated['description'] ?? null,
+            'status' => $validated['status'] ?? 'pending',
             'user_id' => $user_id,
             'subtotal' => round($calcSubtotal, 2),
             'tax' => round($calcTax, 2),
@@ -188,6 +190,7 @@ class InvoiceController extends Controller
             'due_date' => 'required|date',
             'client_id' => 'nullable|exists:clients,id',
             'sender_id' => 'nullable|exists:senders,id',
+            'status' => 'nullable|string|in:pending,approved,rejected',
             'terms' => 'nullable|string',
             'description' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -283,6 +286,7 @@ class InvoiceController extends Controller
             'sender_info' => $senderInfo,
             'terms' => $validated['terms'] ?? $invoice->terms,
             'description' => $validated['description'] ?? $invoice->description,
+            'status' => $validated['status'] ?? $invoice->status ?? 'pending',
             'subtotal' => round($calcSubtotal, 2),
             'tax' => round($calcTax, 2),
             'total' => round($calcTotal, 2),
@@ -312,6 +316,20 @@ class InvoiceController extends Controller
         return redirect()
             ->route('invoices.index')
             ->with('success', 'Invoice deleted successfully.');
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'status' => 'required|string|in:pending,approved,rejected',
+        ]);
+
+        $invoice = Invoice::where('user_id', Auth::id())->findOrFail($id);
+        $invoice->update([
+            'status' => $validated['status'],
+        ]);
+
+        return back()->with('success', 'Invoice status updated to ' . ucfirst($validated['status']));
     }
 
     public function downloadPdf($id)

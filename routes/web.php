@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('items', ItemController::class)->except('show');
     // invoices route
     Route::resource('invoices', InvoiceController::class);
+    Route::patch('/invoices/{id}/status', [InvoiceController::class, 'updateStatus'])->name('invoices.status');
     Route::get('/invoices/{id}/pdf', [InvoiceController::class,'downloadPdf'])->name('invoices.pdf');
 });
 
